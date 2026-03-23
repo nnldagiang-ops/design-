@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISS CANTEEN SEAT RESERVATION</title>
+    <style>
+        :root {
+            --navy: #1a237e; --pink: #f8bbd0; --brown: #795548;
+            --circle: #ad1457; --hallway: #fff9c4;
+            --green: #4caf50; --red: #f44336; --selected: #ffeb3b;
+            --bg: #f5f7fa; --card: #ffffff;
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background: var(--bg); color: #333;
+            margin: 0; display: flex; flex-direction: column; align-items: center; 
+            min-height: 100vh;
+        }
+
+        header { padding: 30px; text-align: center; }
+        header h1 { margin: 0; font-weight: 800; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .legend {
+            display: flex; gap: 20px; margin-bottom: 20px; padding: 15px;
+            background: var(--card); border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .item { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+
+        .canteen-container {
+            display: flex; gap: 15px; padding: 40px;
+            background: var(--card); border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+            overflow-x: auto; max-width: 95vw;
+            margin-bottom: 20px;
+        }
+
+        .col {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 0 25px 20px 25px; 
+            border-right: 1px dashed #cfd8dc;
+            height: auto; 
+        }
+
+        .col.compact { gap: 10px; }
+        .col.spread { gap: 110px; }
+
+        .hallway {
+            width: 80px; background: var(--hallway);
+            display: flex; align-items: center; justify-content: center;
+            writing-mode: vertical-rl; font-weight: bold; color: #bcaaa4;
+            letter-spacing: 5px; text-transform: uppercase; border-radius: 8px;
+            align-self: stretch; 
+        }
+
+        .table { position: relative; transition: transform 0.2s; }
+        .navy { width: 45px; height: 100px; background: var(--navy); margin-bottom: 4px; border-radius: 4px; }
+        .pink { width: 60px; height: 100px; background: var(--pink); border-radius: 6px; }
+        /* Booth updated to fit 12 seats */
+        .booth { width: 85px; height: 160px; background: var(--brown); border-radius: 40px; }
+        .round { width: 60px; height: 60px; background: var(--circle); border-radius: 50%; }
+
+        .seat {
+            width: 14px; height: 14px; background: var(--green);
+            border-radius: 50%; position: absolute; cursor: pointer;
+            border: 2px solid white; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .seat:hover:not(.occupied) { transform: scale(1.5); box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 100; }
+        .seat.selected { background: var(--selected) !important; transform: scale(1.6); border-color: #333; z-index: 101; }
+        .seat.occupied { background: var(--red) !important; cursor: not-allowed; opacity: 0.8; }
+
+        /* Navy Seat Positions (8) */
+        .n-l1 { left: -18px; top: 8%; } .n-r1 { right: -18px; top: 8%; }
+        .n-l2 { left: -18px; top: 33%; } .n-r2 { right: -18px; top: 33%; }
+        .n-l3 { left: -18px; top: 58%; } .n-r3 { right: -18px; top: 58%; }
+        .n-l4 { left: -18px; top: 83%; } .n-r4 { right: -18px; top: 83%; }
+
+        /* Pink Seat Positions (6) */
+        .p-l1 { left: -18px; top: 15%; } .p-r1 { right: -18px; top: 15%; }
+        .p-l2 { left: -18px; top: 50%; } .p-r2 { right: -18px; top: 50%; }
+        .p-l3 { left: -18px; top: 85%; } .p-r3 { right: -18px; top: 85%; }
+
+        /* Booth Seat Positions (12 - 6 each side) */
+        .b-l1 { left: -18px; top: 8%; } .b-r1 { right: -18px; top: 8%; }
+        .b-l2 { left: -18px; top: 25%; } .b-r2 { right: -18px; top: 25%; }
+        .b-l3 { left: -18px; top: 42%; } .b-r3 { right: -18px; top: 42%; }
+        .b-l4 { left: -18px; top: 59%; } .b-r4 { right: -18px; top: 59%; }
+        .b-l5 { left: -18px; top: 76%; } .b-r5 { right: -18px; top: 76%; }
+        .b-l6 { left: -18px; top: 92%; } .b-r6 { right: -18px; top: 92%; }
+
+        /* Round Seat Positions (5) */
+        .c1 { top: -16px; left: 23px; } .c2 { top: 12px; left: -16px; }
+        .c3 { top: 12px; right: -16px; } .c4 { bottom: -10px; left: 6px; } .c5 { bottom: -10px; right: 6px; }
+
+        .footer { padding-bottom: 60px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .confirm-btn {
+            background: #1a1a1a; color: white; border: none; padding: 18px 60px;
+            font-size: 16px; font-weight: 700; border-radius: 50px; cursor: pointer;
+            transition: all 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+        .confirm-btn:hover:not(:disabled) { transform: translateY(-3px); background: #000; }
+        .confirm-btn:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; transform: none; }
+        #status-msg { font-size: 14px; font-weight: 600; height: 20px; color: var(--navy); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>RISS CANTEEN SEAT RESERVATION</h1>
+    </header>
+
+    <div class="legend">
+        <div class="item"><div class="dot" style="background:var(--green)"></div> Available</div>
+        <div class="item"><div class="dot" style="background:var(--selected)"></div> Selected</div>
+        <div class="item"><div class="dot" style="background:var(--red)"></div> Occupied</div>
+    </div>
+
+    <div class="canteen-container" id="canteen">
+        <div class="col compact">
+            <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
+            <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
+            <div style="margin-top: 15px;">
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+            </div>
+        </div>
+
+        <div class="col compact">
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
+            <div style="margin-top: 15px;">
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+            </div>
+        </div>
+
+        <div class="col compact">
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
+            <div style="margin-top: 15px;">
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+                <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
+            </div>
+        </div>
+
+        <div class="col spread">
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
+            <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
+        </div>
+
+        <div class="col spread">
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
+            <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
+        </div>
+
+        <div class="hallway">hallway</div>
+
+        <div class="col spread">
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+        </div>
+
+        <div class="col spread">
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+        </div>
+
+        <div class="col spread" style="border-right: none;">
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div id="status-msg">Select one or more seats to continue</div>
+        <button class="confirm-btn" id="confirm" disabled onclick="handleConfirm()">Confirm Selection</button>
+    </div>
+
+    <script>
+        let selectedSeats = new Set();
+        const confirmBtn = document.getElementById('confirm');
+        const statusMsg = document.getElementById('status-msg');
+
+        document.getElementById('canteen').addEventListener('click', (e) => {
+            const seat = e.target;
+            if(seat.classList.contains('seat') && !seat.classList.contains('occupied')) {
+                if(selectedSeats.has(seat)) {
+                    seat.classList.remove('selected');
+                    selectedSeats.delete(seat);
+                } else {
+                    seat.classList.add('selected');
+                    selectedSeats.add(seat);
+                }
+                if(selectedSeats.size > 0) {
+                    confirmBtn.disabled = false;
+                    statusMsg.innerText = selectedSeats.size + " seat(s) selected";
+                } else {
+                    confirmBtn.disabled = true;
+                    statusMsg.innerText = "Select one or more seats to continue";
+                }
+            }
+        });
+
+        function handleConfirm() {
+            if(selectedSeats.size > 0) {
+                selectedSeats.forEach(seat => {
+                    seat.classList.remove('selected');
+                    seat.classList.add('occupied');
+                });
+                const count = selectedSeats.size;
+                selectedSeats.clear();
+                confirmBtn.disabled = true;
+                statusMsg.style.color = "var(--green)";
+                statusMsg.innerText = "Reserved " + count + " seat(s) successfully!";
+                setTimeout(() => {
+                    statusMsg.style.color = "var(--navy)";
+                    statusMsg.innerText = "Select one or more seats to continue";
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>

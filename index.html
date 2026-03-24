@@ -58,7 +58,6 @@
         .table { position: relative; transition: transform 0.2s; }
         .navy { width: 45px; height: 100px; background: var(--navy); margin-bottom: 4px; border-radius: 4px; }
         .pink { width: 60px; height: 100px; background: var(--pink); border-radius: 6px; }
-        /* Booth updated to fit 12 seats */
         .booth { width: 85px; height: 160px; background: var(--brown); border-radius: 40px; }
         .round { width: 60px; height: 60px; background: var(--circle); border-radius: 50%; }
 
@@ -72,30 +71,37 @@
         .seat.selected { background: var(--selected) !important; transform: scale(1.6); border-color: #333; z-index: 101; }
         .seat.occupied { background: var(--red) !important; cursor: not-allowed; opacity: 0.8; }
 
-        /* Navy Seat Positions (8) */
+        /* Seat Positions Classes */
         .n-l1 { left: -18px; top: 8%; } .n-r1 { right: -18px; top: 8%; }
         .n-l2 { left: -18px; top: 33%; } .n-r2 { right: -18px; top: 33%; }
         .n-l3 { left: -18px; top: 58%; } .n-r3 { right: -18px; top: 58%; }
         .n-l4 { left: -18px; top: 83%; } .n-r4 { right: -18px; top: 83%; }
-
-        /* Pink Seat Positions (6) */
         .p-l1 { left: -18px; top: 15%; } .p-r1 { right: -18px; top: 15%; }
         .p-l2 { left: -18px; top: 50%; } .p-r2 { right: -18px; top: 50%; }
         .p-l3 { left: -18px; top: 85%; } .p-r3 { right: -18px; top: 85%; }
-
-        /* Booth Seat Positions (12 - 6 each side) */
         .b-l1 { left: -18px; top: 8%; } .b-r1 { right: -18px; top: 8%; }
         .b-l2 { left: -18px; top: 25%; } .b-r2 { right: -18px; top: 25%; }
         .b-l3 { left: -18px; top: 42%; } .b-r3 { right: -18px; top: 42%; }
         .b-l4 { left: -18px; top: 59%; } .b-r4 { right: -18px; top: 59%; }
         .b-l5 { left: -18px; top: 76%; } .b-r5 { right: -18px; top: 76%; }
         .b-l6 { left: -18px; top: 92%; } .b-r6 { right: -18px; top: 92%; }
-
-        /* Round Seat Positions (5) */
         .c1 { top: -16px; left: 23px; } .c2 { top: 12px; left: -16px; }
         .c3 { top: 12px; right: -16px; } .c4 { bottom: -10px; left: 6px; } .c5 { bottom: -10px; right: 6px; }
 
-        .footer { padding-bottom: 60px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .footer { padding-bottom: 60px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        
+        .name-input-container {
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+
+        .student-name-input {
+            padding: 12px 20px; border: 2px solid #ddd; border-radius: 10px;
+            font-size: 16px; width: 250px; outline: none; transition: border-color 0.3s;
+            text-align: center;
+        }
+
+        .student-name-input:focus { border-color: var(--navy); }
+
         .confirm-btn {
             background: #1a1a1a; color: white; border: none; padding: 18px 60px;
             font-size: 16px; font-weight: 700; border-radius: 50px; cursor: pointer;
@@ -189,6 +195,9 @@
     </div>
 
     <div class="footer">
+        <div class="name-input-container">
+            <input type="text" id="student-name" class="student-name-input" placeholder="Enter Student Name" oninput="validateForm()">
+        </div>
         <div id="status-msg">Select one or more seats to continue</div>
         <button class="confirm-btn" id="confirm" disabled onclick="handleConfirm()">Confirm Selection</button>
     </div>
@@ -197,6 +206,7 @@
         let selectedSeats = new Set();
         const confirmBtn = document.getElementById('confirm');
         const statusMsg = document.getElementById('status-msg');
+        const nameInput = document.getElementById('student-name');
 
         document.getElementById('canteen').addEventListener('click', (e) => {
             const seat = e.target;
@@ -208,31 +218,49 @@
                     seat.classList.add('selected');
                     selectedSeats.add(seat);
                 }
-                if(selectedSeats.size > 0) {
-                    confirmBtn.disabled = false;
-                    statusMsg.innerText = selectedSeats.size + " seat(s) selected";
-                } else {
-                    confirmBtn.disabled = true;
-                    statusMsg.innerText = "Select one or more seats to continue";
-                }
+                validateForm();
             }
         });
 
+        // Function to check if both seats are selected AND a name is entered
+        function validateForm() {
+            const nameValue = nameInput.value.trim();
+            
+            if(selectedSeats.size > 0 && nameValue.length > 0) {
+                confirmBtn.disabled = false;
+                statusMsg.innerText = selectedSeats.size + " seat(s) selected for " + nameValue;
+            } else if (selectedSeats.size > 0 && nameValue.length === 0) {
+                confirmBtn.disabled = true;
+                statusMsg.innerText = "Please enter your name";
+            } else {
+                confirmBtn.disabled = true;
+                statusMsg.innerText = "Select one or more seats to continue";
+            }
+        }
+
         function handleConfirm() {
-            if(selectedSeats.size > 0) {
+            const studentName = nameInput.value.trim();
+            
+            if(selectedSeats.size > 0 && studentName) {
                 selectedSeats.forEach(seat => {
                     seat.classList.remove('selected');
                     seat.classList.add('occupied');
+                    // In a real app with Supabase, you would save 'studentName' 
+                    // to the database here alongside the seat label.
                 });
+                
                 const count = selectedSeats.size;
                 selectedSeats.clear();
+                nameInput.value = ""; // Clear name field
+                
                 confirmBtn.disabled = true;
                 statusMsg.style.color = "var(--green)";
-                statusMsg.innerText = "Reserved " + count + " seat(s) successfully!";
+                statusMsg.innerText = "Success! " + count + " seat(s) reserved for " + studentName;
+                
                 setTimeout(() => {
                     statusMsg.style.color = "var(--navy)";
                     statusMsg.innerText = "Select one or more seats to continue";
-                }, 3000);
+                }, 4000);
             }
         }
     </script>

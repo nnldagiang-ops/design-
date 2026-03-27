@@ -45,7 +45,7 @@
         }
         
         .seat.selected { background: var(--selected) !important; border-color: #000; transform: scale(1.2); }
-        .seat.occupied { background: var(--red) !important; cursor: not-allowed; pointer-events: none; }
+        .seat.occupied { background: var(--red) !important; cursor: help; } /* Changed cursor to 'help' to signal hover info */
 
         /* Positioning Classes */
         .n-l1 { left: -18px; top: 8%; } .n-r1 { right: -18px; top: 8%; }
@@ -145,14 +145,12 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hYm5zbGp6b2ZhbW5nbHpydHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NzMxMzIsImV4cCI6MjA5MDE0OTEzMn0.0_Ah2SNokwgaIJWEyFERvCKsJz9cFsP3FTBARrDcKHo';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 1. Give every seat a unique ID so we can remember it
         document.querySelectorAll('.seat').forEach((s, i) => s.id = 'seat-' + i);
 
         let selectedSeats = new Set();
         const confirmBtn = document.getElementById('confirm');
         const nameInput = document.getElementById('student-name');
 
-        // 2. Handle Clicking
         document.getElementById('canteen').addEventListener('click', (e) => {
             if (e.target.classList.contains('seat') && !e.target.classList.contains('occupied')) {
                 const id = e.target.id;
@@ -171,7 +169,6 @@
             confirmBtn.disabled = !(selectedSeats.size > 0 && nameInput.value.trim().length > 0);
         }
 
-        // 3. Confirm & Save to Supabase
         async function confirmReservation() {
             const name = nameInput.value.trim();
             confirmBtn.disabled = true;
@@ -182,11 +179,11 @@
                 .insert([{ student_name: name, seat_ids: Array.from(selectedSeats) }]);
 
             if (!error) {
-                // Change UI locally to Red
                 selectedSeats.forEach(id => {
                     const el = document.getElementById(id);
                     el.classList.remove('selected');
                     el.classList.add('occupied');
+                    el.title = "Reserved by: " + name; // Update hover name immediately
                 });
                 selectedSeats.clear();
                 nameInput.value = "";
@@ -200,28 +197,35 @@
             }
         }
 
-        // 4. Load Occupied Seats and Listen for updates
         async function loadOccupied() {
-            const { data } = await _supabase.from('reservations').select('seat_ids');
+            const { data } = await _supabase.from('reservations').select('student_name, seat_ids');
             if (data) {
                 data.forEach(res => {
                     if(res.seat_ids) {
                         res.seat_ids.forEach(id => {
                             const el = document.getElementById(id);
-                            if (el) el.classList.add('occupied');
+                            if (el) {
+                                el.classList.add('occupied');
+                                el.title = "Reserved by: " + res.student_name; // Set hover name from DB
+                                // Prevent clicking red seats
+                                el.onclick = (e) => e.stopPropagation();
+                            }
                         });
                     }
                 });
             }
         }
 
-        // Listen for other people booking (Real-time)
         _supabase
             .channel('any')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reservations' }, (payload) => {
+                const name = payload.new.student_name;
                 payload.new.seat_ids.forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.classList.add('occupied');
+                    if (el) {
+                        el.classList.add('occupied');
+                        el.title = "Reserved by: " + name;
+                    }
                 });
             })
             .subscribe();

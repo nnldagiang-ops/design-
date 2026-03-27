@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RISS CANTEEN SEAT RESERVATION</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --navy: #1a237e; --pink: #f8bbd0; --brown: #795548;
@@ -13,14 +14,13 @@
         }
 
         body { 
-            font-family: 'Inter', -apple-system, sans-serif; 
+            font-family: 'Inter', sans-serif; 
             background: var(--bg); color: #333;
             margin: 0; display: flex; flex-direction: column; align-items: center; 
-            min-height: 100vh;
         }
 
         header { padding: 30px; text-align: center; }
-        header h1 { margin: 0; font-weight: 800; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px; }
+        header h1 { margin: 0; font-weight: 800; text-transform: uppercase; }
         
         .legend {
             display: flex; gap: 20px; margin-bottom: 20px; padding: 15px;
@@ -37,13 +37,7 @@
             margin-bottom: 20px;
         }
 
-        .col {
-            display: flex; flex-direction: column; align-items: center;
-            padding: 0 25px 20px 25px; 
-            border-right: 1px dashed #cfd8dc;
-            height: auto; 
-        }
-
+        .col { display: flex; flex-direction: column; align-items: center; padding: 0 25px 20px 25px; border-right: 1px dashed #cfd8dc; }
         .col.compact { gap: 10px; }
         .col.spread { gap: 110px; }
 
@@ -52,26 +46,26 @@
             display: flex; align-items: center; justify-content: center;
             writing-mode: vertical-rl; font-weight: bold; color: #bcaaa4;
             letter-spacing: 5px; text-transform: uppercase; border-radius: 8px;
-            align-self: stretch; 
         }
 
-        .table { position: relative; transition: transform 0.2s; }
+        .table { position: relative; }
         .navy { width: 45px; height: 100px; background: var(--navy); margin-bottom: 4px; border-radius: 4px; }
         .pink { width: 60px; height: 100px; background: var(--pink); border-radius: 6px; }
         .booth { width: 85px; height: 160px; background: var(--brown); border-radius: 40px; }
         .round { width: 60px; height: 60px; background: var(--circle); border-radius: 50%; }
 
+        /* THE FIX: pointer-events: auto ensures the seat captures the click */
         .seat {
             width: 14px; height: 14px; background: var(--green);
             border-radius: 50%; position: absolute; cursor: pointer;
             border: 2px solid white; transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            pointer-events: auto; z-index: 5;
         }
-        .seat:hover:not(.occupied) { transform: scale(1.5); z-index: 100; }
-        .seat.selected { background: var(--selected) !important; transform: scale(1.6); border-color: #333; z-index: 101; }
-        .seat.occupied { background: var(--red) !important; cursor: help; opacity: 0.8; }
+        
+        .seat.selected { background: var(--selected) !important; transform: scale(1.3); border-color: #000; }
+        .seat.occupied { background: var(--red) !important; cursor: not-allowed; }
 
-        /* Seat Class Positions */
+        /* Position Classes */
         .n-l1 { left: -18px; top: 8%; } .n-r1 { right: -18px; top: 8%; }
         .n-l2 { left: -18px; top: 33%; } .n-r2 { right: -18px; top: 33%; }
         .n-l3 { left: -18px; top: 58%; } .n-r3 { right: -18px; top: 58%; }
@@ -88,11 +82,10 @@
         .c1 { top: -16px; left: 23px; } .c2 { top: 12px; left: -16px; }
         .c3 { top: 12px; right: -16px; } .c4 { bottom: -10px; left: 6px; } .c5 { bottom: -10px; right: 6px; }
 
-        .footer { padding-bottom: 60px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .student-name-input { padding: 12px 20px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; width: 250px; text-align: center; }
-        .confirm-btn { background: #1a1a1a; color: white; border: none; padding: 18px 60px; font-size: 16px; font-weight: 700; border-radius: 50px; cursor: pointer; }
-        .confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
-        #status-msg { font-size: 14px; font-weight: 600; color: var(--navy); }
+        .footer { padding: 40px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .student-name-input { padding: 12px; border-radius: 8px; border: 1px solid #ccc; width: 250px; text-align: center; }
+        .confirm-btn { padding: 15px 40px; border-radius: 30px; border: none; background: #333; color: white; cursor: pointer; font-weight: bold; }
+        .confirm-btn:disabled { background: #ccc; }
     </style>
 </head>
 <body>
@@ -102,7 +95,7 @@
     <div class="legend">
         <div class="item"><div class="dot" style="background:var(--green)"></div> Available</div>
         <div class="item"><div class="dot" style="background:var(--selected)"></div> Selected</div>
-        <div class="item"><div class="dot" style="background:var(--red)"></div> Occupied (Hover for name)</div>
+        <div class="item"><div class="dot" style="background:var(--red)"></div> Occupied</div>
     </div>
 
     <div class="canteen-container" id="canteen">
@@ -116,7 +109,6 @@
                 <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
             </div>
         </div>
-
         <div class="col compact">
             <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
             <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
@@ -127,7 +119,6 @@
                 <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
             </div>
         </div>
-
         <div class="col compact">
             <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
             <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
@@ -138,37 +129,24 @@
                 <div class="table navy"><div class="seat n-l1"></div><div class="seat n-r1"></div><div class="seat n-l2"></div><div class="seat n-r2"></div><div class="seat n-l3"></div><div class="seat n-r3"></div><div class="seat n-l4"></div><div class="seat n-r4"></div></div>
             </div>
         </div>
-
         <div class="col spread">
             <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
             <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
             <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
             <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
         </div>
-
         <div class="col spread">
             <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
             <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
             <div class="table pink"><div class="seat p-l1"></div><div class="seat p-r1"></div><div class="seat p-l2"></div><div class="seat p-r2"></div><div class="seat p-l3"></div><div class="seat p-r3"></div></div>
         </div>
-
         <div class="hallway">hallway</div>
-
-        <div class="col spread">
-            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
-            <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
-            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
-            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
-        </div>
-
         <div class="col spread">
             <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
             <div class="table booth"><div class="seat b-l1"></div><div class="seat b-r1"></div><div class="seat b-l2"></div><div class="seat b-r2"></div><div class="seat b-l3"></div><div class="seat b-r3"></div><div class="seat b-l4"></div><div class="seat b-r4"></div><div class="seat b-l5"></div><div class="seat b-r5"></div><div class="seat b-l6"></div><div class="seat b-r6"></div></div>
             <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
         </div>
-
-        <div class="col spread" style="border-right: none;">
-            <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
+        <div class="col spread">
             <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
             <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
             <div class="table round"><div class="seat c1"></div><div class="seat c2"></div><div class="seat c3"></div><div class="seat c4"></div><div class="seat c5"></div></div>
@@ -176,108 +154,73 @@
     </div>
 
     <div class="footer">
-        <input type="text" id="student-name" class="student-name-input" placeholder="Enter Student Name" oninput="validateForm()">
-        <div id="status-msg">Connecting to canteen database...</div>
-        <button class="confirm-btn" id="confirm" disabled onclick="handleConfirm()">Confirm Selection</button>
+        <input type="text" id="student-name" class="student-name-input" placeholder="Your Name" oninput="checkInput()">
+        <div id="status-msg">Click a green circle</div>
+        <button class="confirm-btn" id="confirm" disabled onclick="saveSelection()">Confirm</button>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // YOUR PROVIDED CREDENTIALS
+        // Supabase API
         const SUPABASE_URL = 'https://oabnsljzofamnglzrtpl.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hYm5zbGp6b2ZhbW5nbHpydHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NzMxMzIsImV4cCI6MjA5MDE0OTEzMn0.0_Ah2SNokwgaIJWEyFERvCKsJz9cFsP3FTBARrDcKHo';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let selectedSeats = new Set();
-        const confirmBtn = document.getElementById('confirm');
-        const statusMsg = document.getElementById('status-msg');
-        const nameInput = document.getElementById('student-name');
+        // GIVE EVERY SEAT AN ID AUTOMATICALLY
+        document.querySelectorAll('.seat').forEach((s, i) => s.id = 'seat-' + i);
 
-        // Function to mark a seat as occupied in the UI
-        function markSeatOccupied(label, name) {
-            const seatElement = document.querySelector(`.seat.${label}`);
-            if (seatElement) {
-                seatElement.classList.add('occupied');
-                seatElement.classList.remove('selected');
-                seatElement.title = "Reserved by: " + name;
-            }
-        }
+        let selected = new Set();
+        const btn = document.getElementById('confirm');
 
-        // INITIAL FETCH
-        async function fetchReservedSeats() {
-            const { data, error } = await supabase.from('seats').select('*');
-            if (error) { statusMsg.innerText = "Error: " + error.message; return; }
-            
-            data.forEach(res => {
-                res.seat_ids_text.forEach(label => markSeatOccupied(label, res.student_name));
-            });
-            statusMsg.innerText = "Map Ready!";
-        }
-
-        // --- AUTO REFRESH (REALTIME) ---
-        supabase
-            .channel('canteen-updates')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'seats' }, (payload) => {
-                // When someone else inserts a new row, update the map instantly
-                const newRes = payload.new;
-                newRes.seat_ids_text.forEach(label => markSeatOccupied(label, newRes.student_name));
-                console.log("New reservation received!", newRes);
-            })
-            .subscribe();
-
-        fetchReservedSeats();
-
-        // SEAT CLICKING
+        // CLICK LOGIC
         document.getElementById('canteen').addEventListener('click', (e) => {
-            const seat = e.target;
-            if(seat.classList.contains('seat') && !seat.classList.contains('occupied')) {
-                if(selectedSeats.has(seat)) {
-                    seat.classList.remove('selected');
-                    selectedSeats.delete(seat);
+            if (e.target.classList.contains('seat') && !e.target.classList.contains('occupied')) {
+                const id = e.target.id;
+                if (selected.has(id)) {
+                    selected.delete(id);
+                    e.target.classList.remove('selected');
                 } else {
-                    seat.classList.add('selected');
-                    selectedSeats.add(seat);
+                    selected.add(id);
+                    e.target.classList.add('selected');
                 }
-                validateForm();
+                checkInput();
             }
         });
 
-        function validateForm() {
-            const nameValue = nameInput.value.trim();
-            confirmBtn.disabled = !(selectedSeats.size > 0 && nameValue.length > 0);
-            if (!confirmBtn.disabled) statusMsg.innerText = `${selectedSeats.size} seats for ${nameValue}`;
+        function checkInput() {
+            const name = document.getElementById('student-name').value.trim();
+            btn.disabled = !(selected.size > 0 && name.length > 0);
         }
 
-        // SUBMIT TO DB
-        async function handleConfirm() {
-            const studentName = nameInput.value.trim();
-            const selectedLabels = Array.from(selectedSeats).map(s => {
-                return Array.from(s.classList).find(c => c.includes('-'));
-            });
-
-            confirmBtn.disabled = true;
-            statusMsg.innerText = "Saving to database...";
-
-            const { error } = await supabase.from('seats').insert([
-                { 
-                    student_name: studentName, 
-                    seat_ids_text: selectedLabels, 
-                    seat_count: selectedLabels.length, 
-                    status: 'occupied' 
-                }
+        async function saveSelection() {
+            const name = document.getElementById('student-name').value;
+            btn.disabled = true;
+            
+            const { error } = await _supabase.from('reservations').insert([
+                { student_name: name, seat_ids: Array.from(selected) }
             ]);
 
-            if (error) { 
-                alert("Upload failed: " + error.message); 
-                confirmBtn.disabled = false; 
+            if(!error) {
+                alert("Saved to Supabase!");
+                location.reload(); // Refresh to show the new red seats
             } else {
-                // UI updates via the Realtime channel or we clear locally
-                selectedSeats.clear();
-                nameInput.value = "";
-                statusMsg.innerText = "Reservation Successful!";
-                setTimeout(() => { statusMsg.innerText = "Select more seats if needed."; }, 3000);
+                alert("Error: " + error.message);
+                btn.disabled = false;
             }
         }
+
+        // LOAD TAKEN SEATS FROM SUPABASE
+        async function load() {
+            const { data } = await _supabase.from('reservations').select('seat_ids');
+            if (data) {
+                data.forEach(row => {
+                    row.seat_ids.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.classList.add('occupied');
+                    });
+                });
+            }
+        }
+        load();
     </script>
 </body>
 </html>

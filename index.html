@@ -64,25 +64,14 @@
         .seat {
             width: 14px; height: 14px; background: var(--green);
             border-radius: 50%; position: absolute; cursor: pointer;
-            border: 2px solid white; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid white; transition: all 0.2s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .seat:hover:not(.occupied) { transform: scale(1.5); box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 100; }
-        
-        /* Tooltip style for hovered occupied seats */
-        .seat.occupied:hover::after {
-            content: attr(data-name);
-            position: absolute; bottom: 20px; left: 50%;
-            transform: translateX(-50%);
-            background: #333; color: white;
-            padding: 4px 8px; border-radius: 4px;
-            font-size: 11px; white-space: nowrap; z-index: 1000;
-        }
-
+        .seat:hover:not(.occupied) { transform: scale(1.5); z-index: 100; }
         .seat.selected { background: var(--selected) !important; transform: scale(1.6); border-color: #333; z-index: 101; }
         .seat.occupied { background: var(--red) !important; cursor: help; opacity: 0.8; }
 
-        /* Seat Positions Classes */
+        /* Seat Class Positions */
         .n-l1 { left: -18px; top: 8%; } .n-r1 { right: -18px; top: 8%; }
         .n-l2 { left: -18px; top: 33%; } .n-r2 { right: -18px; top: 33%; }
         .n-l3 { left: -18px; top: 58%; } .n-r3 { right: -18px; top: 58%; }
@@ -100,39 +89,20 @@
         .c3 { top: 12px; right: -16px; } .c4 { bottom: -10px; left: 6px; } .c5 { bottom: -10px; right: 6px; }
 
         .footer { padding-bottom: 60px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        
-        .name-input-container {
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-        }
-
-        .student-name-input {
-            padding: 12px 20px; border: 2px solid #ddd; border-radius: 10px;
-            font-size: 16px; width: 250px; outline: none; transition: border-color 0.3s;
-            text-align: center;
-        }
-
-        .student-name-input:focus { border-color: var(--navy); }
-
-        .confirm-btn {
-            background: #1a1a1a; color: white; border: none; padding: 18px 60px;
-            font-size: 16px; font-weight: 700; border-radius: 50px; cursor: pointer;
-            transition: all 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-        }
-        .confirm-btn:hover:not(:disabled) { transform: translateY(-3px); background: #000; }
-        .confirm-btn:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; transform: none; }
-        #status-msg { font-size: 14px; font-weight: 600; height: 20px; color: var(--navy); }
+        .student-name-input { padding: 12px 20px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; width: 250px; text-align: center; }
+        .confirm-btn { background: #1a1a1a; color: white; border: none; padding: 18px 60px; font-size: 16px; font-weight: 700; border-radius: 50px; cursor: pointer; }
+        .confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
+        #status-msg { font-size: 14px; font-weight: 600; color: var(--navy); }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>RISS CANTEEN SEAT RESERVATION</h1>
-    </header>
+    <header><h1>RISS CANTEEN SEAT RESERVATION</h1></header>
 
     <div class="legend">
         <div class="item"><div class="dot" style="background:var(--green)"></div> Available</div>
         <div class="item"><div class="dot" style="background:var(--selected)"></div> Selected</div>
-        <div class="item"><div class="dot" style="background:var(--red)"></div> Occupied (Hover to see name)</div>
+        <div class="item"><div class="dot" style="background:var(--red)"></div> Occupied (Hover for name)</div>
     </div>
 
     <div class="canteen-container" id="canteen">
@@ -206,19 +176,58 @@
     </div>
 
     <div class="footer">
-        <div class="name-input-container">
-            <input type="text" id="student-name" class="student-name-input" placeholder="Enter Student Name" oninput="validateForm()">
-        </div>
-        <div id="status-msg">Select one or more seats to continue</div>
+        <input type="text" id="student-name" class="student-name-input" placeholder="Enter Student Name" oninput="validateForm()">
+        <div id="status-msg">Connecting to canteen database...</div>
         <button class="confirm-btn" id="confirm" disabled onclick="handleConfirm()">Confirm Selection</button>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // YOUR PROVIDED CREDENTIALS
+        const SUPABASE_URL = 'https://oabnsljzofamnglzrtpl.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hYm5zbGp6b2ZhbW5nbHpydHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NzMxMzIsImV4cCI6MjA5MDE0OTEzMn0.0_Ah2SNokwgaIJWEyFERvCKsJz9cFsP3FTBARrDcKHo';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         let selectedSeats = new Set();
         const confirmBtn = document.getElementById('confirm');
         const statusMsg = document.getElementById('status-msg');
         const nameInput = document.getElementById('student-name');
 
+        // Function to mark a seat as occupied in the UI
+        function markSeatOccupied(label, name) {
+            const seatElement = document.querySelector(`.seat.${label}`);
+            if (seatElement) {
+                seatElement.classList.add('occupied');
+                seatElement.classList.remove('selected');
+                seatElement.title = "Reserved by: " + name;
+            }
+        }
+
+        // INITIAL FETCH
+        async function fetchReservedSeats() {
+            const { data, error } = await supabase.from('seats').select('*');
+            if (error) { statusMsg.innerText = "Error: " + error.message; return; }
+            
+            data.forEach(res => {
+                res.seat_ids_text.forEach(label => markSeatOccupied(label, res.student_name));
+            });
+            statusMsg.innerText = "Map Ready!";
+        }
+
+        // --- AUTO REFRESH (REALTIME) ---
+        supabase
+            .channel('canteen-updates')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'seats' }, (payload) => {
+                // When someone else inserts a new row, update the map instantly
+                const newRes = payload.new;
+                newRes.seat_ids_text.forEach(label => markSeatOccupied(label, newRes.student_name));
+                console.log("New reservation received!", newRes);
+            })
+            .subscribe();
+
+        fetchReservedSeats();
+
+        // SEAT CLICKING
         document.getElementById('canteen').addEventListener('click', (e) => {
             const seat = e.target;
             if(seat.classList.contains('seat') && !seat.classList.contains('occupied')) {
@@ -235,45 +244,38 @@
 
         function validateForm() {
             const nameValue = nameInput.value.trim();
-            if(selectedSeats.size > 0 && nameValue.length > 0) {
-                confirmBtn.disabled = false;
-                statusMsg.innerText = selectedSeats.size + " seat(s) selected for " + nameValue;
-            } else if (selectedSeats.size > 0 && nameValue.length === 0) {
-                confirmBtn.disabled = true;
-                statusMsg.innerText = "Please enter your name";
-            } else {
-                confirmBtn.disabled = true;
-                statusMsg.innerText = "Select one or more seats to continue";
-            }
+            confirmBtn.disabled = !(selectedSeats.size > 0 && nameValue.length > 0);
+            if (!confirmBtn.disabled) statusMsg.innerText = `${selectedSeats.size} seats for ${nameValue}`;
         }
 
-        function handleConfirm() {
+        // SUBMIT TO DB
+        async function handleConfirm() {
             const studentName = nameInput.value.trim();
-            
-            if(selectedSeats.size > 0 && studentName) {
-                selectedSeats.forEach(seat => {
-                    seat.classList.remove('selected');
-                    seat.classList.add('occupied');
-                    
-                    // KEY ADDITION: This sets the tooltip name when you hover
-                    seat.title = "Reserved by: " + studentName;
-                    
-                    // Also setting a data attribute just in case we need it for CSS later
-                    seat.setAttribute('data-name', studentName);
-                });
-                
-                const count = selectedSeats.size;
+            const selectedLabels = Array.from(selectedSeats).map(s => {
+                return Array.from(s.classList).find(c => c.includes('-'));
+            });
+
+            confirmBtn.disabled = true;
+            statusMsg.innerText = "Saving to database...";
+
+            const { error } = await supabase.from('seats').insert([
+                { 
+                    student_name: studentName, 
+                    seat_ids_text: selectedLabels, 
+                    seat_count: selectedLabels.length, 
+                    status: 'occupied' 
+                }
+            ]);
+
+            if (error) { 
+                alert("Upload failed: " + error.message); 
+                confirmBtn.disabled = false; 
+            } else {
+                // UI updates via the Realtime channel or we clear locally
                 selectedSeats.clear();
                 nameInput.value = "";
-                
-                confirmBtn.disabled = true;
-                statusMsg.style.color = "var(--green)";
-                statusMsg.innerText = "Success! " + count + " seat(s) reserved for " + studentName;
-                
-                setTimeout(() => {
-                    statusMsg.style.color = "var(--navy)";
-                    statusMsg.innerText = "Select one or more seats to continue";
-                }, 4000);
+                statusMsg.innerText = "Reservation Successful!";
+                setTimeout(() => { statusMsg.innerText = "Select more seats if needed."; }, 3000);
             }
         }
     </script>

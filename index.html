@@ -45,24 +45,7 @@
         }
         
         .seat.selected { background: var(--selected) !important; border-color: #000; transform: scale(1.2); }
-        .seat.occupied { background: var(--red) !important; cursor: help; }
-
-        /* THE HOVER TOOLTIP FIX */
-        .seat.occupied:hover::after {
-            content: attr(data-name);
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            white-space: nowrap;
-            z-index: 100;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
+        .seat.occupied { background: var(--red) !important; cursor: help; } /* Show question mark on hover */
 
         /* Positioning Classes */
         .n-l1 { left: -18px; top: 8%; } .n-r1 { right: -18px; top: 8%; }
@@ -200,7 +183,7 @@
                     const el = document.getElementById(id);
                     el.classList.remove('selected');
                     el.classList.add('occupied');
-                    el.setAttribute('data-name', name); // Tooltip text update
+                    el.title = name; // SET NAME HERE IMMEDIATELY
                 });
                 selectedSeats.clear();
                 nameInput.value = "";
@@ -223,7 +206,7 @@
                             const el = document.getElementById(id);
                             if (el) {
                                 el.classList.add('occupied');
-                                el.setAttribute('data-name', res.student_name); // Tooltip text from DB
+                                el.title = res.student_name; // LOAD NAME HERE
                             }
                         });
                     }
@@ -239,7 +222,7 @@
                     const el = document.getElementById(id);
                     if (el) {
                         el.classList.add('occupied');
-                        el.setAttribute('data-name', name);
+                        el.title = name; // UPDATE NAME LIVE
                     }
                 });
             })

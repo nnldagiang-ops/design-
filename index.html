@@ -78,7 +78,7 @@
             background: #333; color: white;
             padding: 5px 10px; border-radius: 5px;
             font-size: 12px; white-space: nowrap; 
-            z-index: 9999; /* Always on top */
+            z-index: 9999; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             pointer-events: none;
         }
@@ -87,7 +87,7 @@
         .seat.selected { background: var(--selected) !important; transform: scale(1.6); border-color: #333; z-index: 101; }
         .seat.occupied { background: var(--red) !important; cursor: help; opacity: 1; pointer-events: auto !important; }
 
-        /* Seat Positions */
+        /* Positioning Classes */
         .n-l1 { left: -18px; top: 8%; } .n-r1 { right: -18px; top: 8%; }
         .n-l2 { left: -18px; top: 33%; } .n-r2 { right: -18px; top: 33%; }
         .n-l3 { left: -18px; top: 58%; } .n-r3 { right: -18px; top: 58%; }
@@ -215,7 +215,6 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hYm5zbGp6b2ZhbW5nbHpydHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NzMxMzIsImV4cCI6MjA5MDE0OTEzMn0.0_Ah2SNokwgaIJWEyFERvCKsJz9cFsP3FTBARrDcKHo';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // ID assignment
         document.querySelectorAll('.seat').forEach((s, i) => s.id = 'seat-' + i);
 
         let selectedSeats = new Set();
@@ -268,12 +267,11 @@
                     el.setAttribute('data-name', studentName);
                 });
                 
-                const count = selectedSeats.size;
                 selectedSeats.clear();
                 nameInput.value = "";
                 confirmBtn.innerText = "Confirm Selection";
                 statusMsg.style.color = "var(--green)";
-                statusMsg.innerText = "Success! " + count + " reserved for " + studentName;
+                statusMsg.innerText = "Success!";
                 
                 setTimeout(() => {
                     statusMsg.style.color = "var(--navy)";
